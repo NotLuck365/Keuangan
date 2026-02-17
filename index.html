@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catatan Keuangan</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      padding: 20px;
+    }
+
+    h1 { text-align: center; }
+
+    .container {
+      max-width: 1150px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    @media(min-width: 900px) {
+      .container { grid-template-columns: 350px 1fr; }
+    }
+
+    .card {
+      background: rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    }
+
+    label { font-size: 13px; opacity: 0.8; }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(255,255,255,0.12);
+      color: rgb(120, 120, 120);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #38bdf8;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px;
+      background: rgba(56,189,248,0.15);
+      color: #38bdf8;
+    }
+
+    td {
+      padding: 11px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    tr:hover { background: rgba(255,255,255,0.05); }
+
+    .amount-cell {
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .income { color: #22c55e; }
+    .expense { color: #ef4444; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .summary div {
+      background: rgba(255,255,255,0.06);
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .money-input {
+      font-size: 18px;
+      font-weight: bold;
+      text-align: right;
+    }
+
+    .delete-btn {
+      background: #ef4444;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-top: 10px;
+    }
+
+    @media(min-width: 900px) {
+      .charts-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .chart-box {
+      background: rgba(255,255,255,0.05);
+      padding: 15px;
+      border-radius: 14px;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+  </style>
+</head>
+<body>
+
+<h1>💰 Catatan Keuangan</h1>
+
+<div class="container">
+
+  <div class="card">
+    <h3>Tambah Transaksi</h3>
+
+    <label>Tanggal</label>
+    <input type="date" id="date">
+
+    <label>Keterangan</label>
+    <input type="text" id="desc">
+
+    <label>Jenis</label>
+    <select id="type" onchange="updateCategoryOptions()">
+      <option value="income">Pemasukan</option>
+      <option value="expense">Pengeluaran</option>
+    </select>
+
+    <label>Kategori</label>
+    <select id="category"></select>
+
+    <label>Jumlah</label>
+    <input type="text" id="amount" class="money-input">
+
+    <button onclick="addTransaction()">Simpan</button>
+
+    <h4>📅 Rangkuman Bulanan</h4>
+    <div class="summary">
+      <div><small>Pemasukan</small><h4 id="totalIncome"></h4></div>
+      <div><small>Pengeluaran</small><h4 id="totalExpense"></h4></div>
+      <div><small>Saldo</small><h4 id="balance"></h4></div>
+    </div>
+
+    <h4>📆 Rangkuman Tahunan</h4>
+    <div class="summary">
+      <div><small>Pemasukan</small><h4 id="yearIncome"></h4></div>
+      <div><small>Pengeluaran</small><h4 id="yearExpense"></h4></div>
+      <div><small>Saldo</small><h4 id="yearBalance"></h4></div>
+    </div>
+  </div>
+
+  <div class="card">
+
+    <h3>Filter Bulan</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <select id="month"></select>
+      <select id="year"></select>
+    </div>
+
+    <h3>Daftar Transaksi</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Tanggal</th>
+          <th>Keterangan</th>
+          <th>Kategori</th>
+          <th>Jenis</th>
+          <th style="text-align:right;">Jumlah</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="transactionList"></tbody>
+    </table>
+
+    <div class="charts-grid">
+
+      <div class="chart-box">
+        <h4>Grafik Bulanan</h4>
+        <canvas id="financeChart"></canvas>
+      </div>
+
+      <div class="chart-box">
+        <h4>Pengeluaran per Kategori</h4>
+        <canvas id="categoryChart"></canvas>
+      </div>
+
+      <div class="chart-box full-width">
+        <h4>Grafik Tahunan</h4>
+        <canvas id="yearChart"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+
+const incomeCategories = ["Gaji","Bonus","Usaha","Investasi","Lainnya"];
+const expenseCategories = ["Makan","Transport","Tagihan","Belanja","Hiburan","Lainnya"];
+
+const categorySelect = document.getElementById("category");
+const typeSelect = document.getElementById("type");
+
+function updateCategoryOptions() {
+  const categories = typeSelect.value === "income" ? incomeCategories : expenseCategories;
+  categorySelect.innerHTML = "";
+  categories.forEach(cat => categorySelect.innerHTML += `<option value="${cat}">${cat}</option>`);
+}
+updateCategoryOptions();
+
+const monthSelect = document.getElementById("month");
+const yearSelect = document.getElementById("year");
+
+const months = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+months.forEach((m, i) => monthSelect.innerHTML += `<option value="${i}">${m}</option>`);
+
+const currentYear = new Date().getFullYear();
+for (let y = currentYear - 5; y <= currentYear + 1; y++) {
+  yearSelect.innerHTML += `<option value="${y}">${y}</option>`;
+}
+
+monthSelect.value = new Date().getMonth();
+yearSelect.value = currentYear;
+
+function saveData() {
+  localStorage.setItem("transactions", JSON.stringify(transactions));
+}
+
+function formatRupiah(num) {
+  return "Rp " + num.toLocaleString("id-ID");
+}
+
+function cleanNumber(value) {
+  return parseFloat(value.replace(/\./g, "")) || 0;
+}
+
+function formatDateDisplay(dateStr) {
+  const d = new Date(dateStr);
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function addTransaction() {
+  const date = document.getElementById("date").value;
+  const desc = document.getElementById("desc").value;
+  const type = typeSelect.value;
+  const category = categorySelect.value;
+  const amount = cleanNumber(document.getElementById("amount").value);
+
+  if (!date || !desc || !amount) return alert("Lengkapi data!");
+
+  transactions.push({ date, desc, type, category, amount });
+  saveData();
+  render();
+}
+
+function deleteTransaction(index) {
+  transactions.splice(index, 1);
+  saveData();
+  render();
+}
+
+let financeChart, categoryChart, yearChart;
+
+function render() {
+  const selectedMonth = parseInt(monthSelect.value);
+  const selectedYear = parseInt(yearSelect.value);
+
+  const list = document.getElementById("transactionList");
+  list.innerHTML = "";
+
+  let income = 0, expense = 0;
+  let yearIncome = 0, yearExpense = 0;
+
+  let monthlyCategoryTotals = {};
+  let monthlyIncomeData = Array(12).fill(0);
+  let monthlyExpenseData = Array(12).fill(0);
+
+  transactions.forEach(t => {
+    const d = new Date(t.date);
+    const month = d.getMonth();
+    const year = d.getFullYear();
+
+    if (year === selectedYear) {
+      if (t.type === "income") {
+        yearIncome += t.amount;
+        monthlyIncomeData[month] += t.amount;
+      } else {
+        yearExpense += t.amount;
+        monthlyExpenseData[month] += t.amount;
+      }
+    }
+
+    if (month === selectedMonth && year === selectedYear) {
+      if (t.type === "income") income += t.amount;
+      else {
+        expense += t.amount;
+        monthlyCategoryTotals[t.category] = (monthlyCategoryTotals[t.category] || 0) + t.amount;
+      }
+
+      list.innerHTML += `
+        <tr>
+          <td>${formatDateDisplay(t.date)}</td>
+          <td>${t.desc}</td>
+          <td>${t.category}</td>
+          <td class="${t.type}">${t.type === "income" ? "Pemasukan" : "Pengeluaran"}</td>
+          <td class="amount-cell">${formatRupiah(t.amount)}</td>
+          <td><button class="delete-btn" onclick="deleteTransaction(${transactions.indexOf(t)})">X</button></td>
+        </tr>`;
+    }
+  });
+
+  document.getElementById("totalIncome").innerText = formatRupiah(income);
+  document.getElementById("totalExpense").innerText = formatRupiah(expense);
+  document.getElementById("balance").innerText = formatRupiah(income - expense);
+
+  document.getElementById("yearIncome").innerText = formatRupiah(yearIncome);
+  document.getElementById("yearExpense").innerText = formatRupiah(yearExpense);
+  document.getElementById("yearBalance").innerText = formatRupiah(yearIncome - yearExpense);
+
+  updateCharts(income, expense, monthlyIncomeData, monthlyExpenseData, monthlyCategoryTotals);
+}
+
+function updateCharts(income, expense, monthlyIncomeData, monthlyExpenseData, monthlyCategoryTotals) {
+
+  if (financeChart) financeChart.destroy();
+  if (categoryChart) categoryChart.destroy();
+  if (yearChart) yearChart.destroy();
+
+  financeChart = new Chart(document.getElementById("financeChart"), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pemasukan','Pengeluaran'],
+      datasets: [{
+        data: [income, expense],
+        backgroundColor: ['#22c55e','#ef4444'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      cutout: '65%',
+      plugins: { legend: { labels: { color: 'white' } } }
+    }
+  });
+
+  yearChart = new Chart(document.getElementById("yearChart"), {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'Pemasukan', data: monthlyIncomeData, backgroundColor:'#22c55e', borderRadius:6 },
+        { label: 'Pengeluaran', data: monthlyExpenseData, backgroundColor:'#ef4444', borderRadius:6 }
+      ]
+    }
+  });
+
+  const labels = Object.keys(monthlyCategoryTotals);
+  const data = Object.values(monthlyCategoryTotals);
+
+  categoryChart = new Chart(document.getElementById("categoryChart"), {
+    type: 'doughnut',
+    data: {
+      labels: labels.length ? labels : ['Belum ada data'],
+      datasets: [{
+        data: data.length ? data : [1],
+        backgroundColor: data.length
+          ? ['#ef4444','#f97316','#eab308','#22c55e','#38bdf8','#a855f7']
+          : ['rgba(255,255,255,0.2)'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      cutout: '60%',
+      plugins: { legend: { labels: { color: 'white' } } }
+    }
+  });
+}
+
+document.getElementById("amount").addEventListener("input", function() {
+  let v = this.value.replace(/\D/g, "");
+  this.value = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+});
+
+monthSelect.addEventListener("change", render);
+yearSelect.addEventListener("change", render);
+
+render();
+</script>
+
+</body>
+</html>
